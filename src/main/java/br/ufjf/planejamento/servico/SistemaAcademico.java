@@ -37,11 +37,15 @@ public class SistemaAcademico {
 
     /**
      * Executa a simulação de matrícula para o período atual para todos os alunos.
-     * Após a execução, atualiza o histórico dos alunos com as disciplinas aceitas.
+     * Só atualiza o histórico dos alunos se TODAS as turmas planejadas forem aceitas.
+     * O período só avança se TODAS as turmas planejadas por TODOS os alunos forem aceitas.
      * @return Um mapa contendo o relatório de cada aluno processado.
      */
     public Map<Aluno, RelatorioMatricula> executarSimulacaoPeriodo() {
         Map<Aluno, RelatorioMatricula> relatorios = new LinkedHashMap<>();
+        boolean todasTurmasForamAceitas = true;
+        int totalTurmasPlanejadas = 0;
+        
         for (Aluno aluno : CatalogoAlunos.getTodosAlunos()) {
             if (aluno.getPlanejamento() == null || aluno.getPlanejamento().isEmpty()) {
                 continue; // Pula alunos que não planejaram nada
@@ -49,9 +53,33 @@ public class SistemaAcademico {
             RelatorioMatricula relatorio = servicoMatricula.processarPlanejamento(aluno);
             relatorios.put(aluno, relatorio);
 
-            atualizarHistoricoAluno(aluno, relatorio);
+            // Conta turmas planejadas e aceitas para este aluno
+            int turmasPlanejadas = aluno.getPlanejamento().size();
+            int turmasAceitas = relatorio.getTurmasAceitas().size();
+            
+            totalTurmasPlanejadas += turmasPlanejadas;
+            
+            // Se nem todas as turmas deste aluno foram aceitas, o período não avança
+            if (turmasAceitas < turmasPlanejadas) {
+                todasTurmasForamAceitas = false;
+            }
         }
-        periodoAtual++;
+        
+        // Só avança o período E atualiza históricos se TODAS as turmas planejadas foram aceitas
+        if (todasTurmasForamAceitas && totalTurmasPlanejadas > 0) {
+            periodoAtual++;
+            // Só atualiza o histórico dos alunos se o período avançou
+            for (Map.Entry<Aluno, RelatorioMatricula> entry : relatorios.entrySet()) {
+                atualizarHistoricoAluno(entry.getKey(), entry.getValue());
+            }
+        } else {
+            // Se o período não avançou, limpa o planejamento de todos os alunos
+            // para permitir novo planejamento
+            for (Aluno aluno : relatorios.keySet()) {
+                aluno.setPlanejamento(new ArrayList<>());
+            }
+        }
+        
         return relatorios;
     }
 
