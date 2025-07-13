@@ -4,16 +4,14 @@ import br.ufjf.planejamento.validacao.ValidadorPreRequisito;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class Disciplina {
-    protected String codigo;
-    protected String nome;
-    protected int cargaHoraria;
+    protected String codigo;           
+    protected String nome;             
+    protected int cargaHoraria;       
 
-    // Lista de validadores de pré-requisito (polimórficos)
     protected List<ValidadorPreRequisito> validadoresPreRequisito = new ArrayList<>();
-
-    // Lista de co-requisitos (disciplinas que devem ser cursadas juntas)
     protected List<Disciplina> coRequisitos = new ArrayList<>();
 
     public Disciplina(String codigo, String nome, int cargaHoraria) {
@@ -22,13 +20,11 @@ public abstract class Disciplina {
         this.cargaHoraria = cargaHoraria;
     }
 
-    // Método abstrato que será implementado pelas subclasses
-    public abstract String getTipo(); // "Obrigatória", "Eletiva", "Optativa"
+    // Métodos abstratos: 
+    public abstract String getTipo();
+    public abstract int getPrioridade(); // maior número = maior prioridade
 
-    // ----------------------
-    // Getters e Setters
-    // ----------------------
-
+    // Getters
     public String getCodigo() {
         return codigo;
     }
@@ -49,16 +45,27 @@ public abstract class Disciplina {
         return coRequisitos;
     }
 
-    // ----------------------
     // Métodos auxiliares
-    // ----------------------
-
     public void adicionarValidador(ValidadorPreRequisito validador) {
-        this.validadoresPreRequisito.add(validador);
+        validadoresPreRequisito.add(validador);
     }
 
     public void adicionarCoRequisito(Disciplina disciplina) {
-        this.coRequisitos.add(disciplina);
+        coRequisitos.add(disciplina);
+    }
+
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Disciplina)) return false;
+        Disciplina that = (Disciplina) o;
+        return codigo.equals(that.codigo);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(codigo);
     }
 
     @Override
