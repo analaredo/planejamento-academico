@@ -1,5 +1,6 @@
 package br.ufjf.planejamento.servico;
 
+import br.ufjf.planejamento.excecoes.PreRequisitoNaoCumpridoException;
 import br.ufjf.planejamento.modelo.Aluno;
 import br.ufjf.planejamento.modelo.Disciplina;
 import br.ufjf.planejamento.modelo.Turma;
@@ -29,13 +30,14 @@ public class ServicoMatricula {
 
             // 1. Pré-requisitos
             logEventos.add("Verificando pré-requisitos...");
-            String motivo = validarPreRequisitos(aluno, turma.getDisciplina());
-            if (motivo != null) {
-                logEventos.add("FALHA: " + motivo);
-                rejeicoes.put(turma, motivo);
+            try{
+                validarPreRequisitos(aluno, turma.getDisciplina());
+                logEventos.add("SUCESSO: Pré-requisitos atendidos.");
+            }catch(PreRequisitoNaoCumpridoException e) {
+                logEventos.add("FALHA: " + e.getMessage());
+                rejeicoes.put(turma, e.getMessage());
                 continue;
             }
-            logEventos.add("SUCESSO: Pré-requisitos atendidos.");
 
             // 2. Co-requisitos
             logEventos.add("Verificando co-requisitos...");
@@ -145,10 +147,10 @@ public class ServicoMatricula {
                 .collect(Collectors.toList());
     }
 
-    private String validarPreRequisitos(Aluno aluno, Disciplina disciplina) {
+    private String validarPreRequisitos(Aluno aluno, Disciplina disciplina) throws PreRequisitoNaoCumpridoException {
         for (ValidadorPreRequisito val : disciplina.getValidadoresPreRequisito()) {
             if (!val.validar(aluno)) {
-                return "Pré-requisito não cumprido: " + val.getMensagemErro();
+                throw new PreRequisitoNaoCumpridoException(disciplina.getCodigo());
             }
         }
         return null;
