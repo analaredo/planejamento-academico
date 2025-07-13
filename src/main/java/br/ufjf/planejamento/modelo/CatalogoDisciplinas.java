@@ -3,6 +3,8 @@ package br.ufjf.planejamento.modelo;
 import br.ufjf.planejamento.validacao.ValidadorLogicoAND;
 import br.ufjf.planejamento.validacao.ValidadorLogicoOR;
 import br.ufjf.planejamento.validacao.ValidadorSimples;
+
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,8 +24,10 @@ public class CatalogoDisciplinas {
 
         Disciplina alg2 = criarObrigatoria("DCC200", "Algoritmos 2", 60);
         Disciplina alg2Lab = criarObrigatoria("DC5200", "Algoritmos 2 - Prática", 30);
-        configurarCodependencia(alg2, alg2Lab);
+
+        alg2Lab.adicionarCoRequisito(alg2);
         alg2.adicionarValidador(new ValidadorSimples("DCC199"));
+
 
         // Matemática
         Disciplina calc1 = criarObrigatoria("MAT154", "Cálculo 1", 60);
@@ -95,5 +99,13 @@ public class CatalogoDisciplinas {
      */
     public static Disciplina getDisciplina(String codigo) {
         return disciplinas.get(codigo);
+    }
+
+    public static Collection<Disciplina> getTodasDisciplinas() {
+        return disciplinas.values();
+    }
+
+    public static boolean removerDisciplina(String codigo) {
+        return disciplinas.remove(codigo) != null;
     }
 }
