@@ -55,6 +55,17 @@ public class Aluno {
         return nota != null && nota >= 60.0f;
     }
 
+    /**
+     * Calcula o total de créditos (carga horária) das disciplinas em que o aluno foi aprovado.
+     * @return O total de créditos concluídos.
+     */
+    public int getCreditosConcluidos() {
+        return disciplinasCursadas.entrySet().stream()
+                .filter(entry -> entry.getValue() >= 60.0f)
+                .mapToInt(entry -> entry.getKey().getCargaHoraria())
+                .sum();
+    }
+
     // Getters e Setters
 
     public String getNome() {
