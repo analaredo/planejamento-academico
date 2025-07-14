@@ -13,21 +13,24 @@ public class App {
     private SistemaAcademico sistema;
     private final Scanner scanner;
     private final Map<String, Map<Integer, RelatorioMatricula>> historicoDeRelatorios;
+    private int periodoCorrente;
 
     public App() {
         this.sistema = null;
         this.scanner = new Scanner(System.in);
         this.historicoDeRelatorios = new HashMap<>();
+        this.periodoCorrente = 1;
     }
 
     public void executar() {
+        System.out.println("Bem-vindo ao Sistema de Planejamento Acadêmico!");
         System.out.println("Por favor, crie um cenário para começar.");
 
         while (true) {
             exibirMenuPrincipal();
             int opcao = lerInteiro("Escolha uma opção");
             if (!processarOpcaoMenu(opcao)) {
-                break;
+                break; // Sai do loop se o usuário escolher sair
             }
         }
         System.out.println("Encerrando o sistema.");
@@ -35,24 +38,22 @@ public class App {
 
     private void exibirMenuPrincipal() {
         if (sistema != null) {
-            System.out.printf("SISTEMA DE PLANEJAMENTO ACADÊMICO (Período: %d)\n", sistema.getPeriodoAtual());
+            System.out.printf("     SISTEMA DE PLANEJAMENTO ACADÊMICO (Período: %d)\n", this.periodoCorrente);
         } else {
-            System.out.println("SISTEMA DE PLANEJAMENTO ACADÊMICO (Nenhum cenário carregado)");
+            System.out.println("     SISTEMA DE PLANEJAMENTO ACADÊMICO (Nenhum cenário carregado)");
         }
-        System.out.println("--------------------------------------------------------");
         System.out.println("1. Gerenciar cenário");
         System.out.println("2. Consultas e listagens");
-        System.out.println("3. Montar planejamento de matrícula");
-        System.out.println("4. Remover turma do planejamento");
-        System.out.println("5. Executar simulação de matrícula do Período");
+        System.out.println("3. Adicionar turmas nos planejamento");
+        System.out.println("4. Remover turmas dos planejamentos");
+        System.out.println("5. Avançar o período");
         System.out.println("6. Ver histórico de relatórios");
         System.out.println("7. Sair");
-        System.out.println("--------------------------------------------------------");
     }
 
     private boolean processarOpcaoMenu(int opcao) {
         if (sistema == null && opcao > 1 && opcao < 7) {
-            System.out.println("ERRO: Você precisa criar um cenário primeiro (opção 1).");
+            System.out.println("ERRO: Você precisa criar um cenário primeiro (Opção 1).");
             return true;
         }
 
@@ -67,7 +68,7 @@ public class App {
                 montarPlanejamento();
                 break;
             case 4:
-                removerTurmaDoPlano();
+                removerTurmaDoPlanejamento();
                 break;
             case 5:
                 executarSimulacao();
@@ -84,10 +85,10 @@ public class App {
     }
 
     private void menuGerenciarCenario() {
-        System.out.println("\n--- Gerenciar cenário ---");
-        System.out.println("1. Criar cenário padrão (com dados de exemplo)");
-        System.out.println("2. Criar Cenário vazio");
-        System.out.println("3. Criar Cenário personalizado");
+        System.out.println("\n--- Gerenciar cenário atual ---");
+        System.out.println("1. Utilizar dados prontos");
+        System.out.println("2. Definir como cenário vazio (para montar do zero)");
+        System.out.println("3. Criar cenário por etapas");
         System.out.println("4. Voltar ao menu principal");
         int opcao = lerInteiro("Escolha uma opção");
 
@@ -95,11 +96,13 @@ public class App {
             case 1:
                 this.sistema = SistemaAcademico.Configurador.criarConfiguracaoPadrao().construir();
                 this.historicoDeRelatorios.clear();
+                this.periodoCorrente = 1;
                 System.out.println("Cenário padrão criado com sucesso!");
                 break;
             case 2:
                 this.sistema = new SistemaAcademico.Configurador().construir();
                 this.historicoDeRelatorios.clear();
+                this.periodoCorrente = 1;
                 System.out.println("Cenário vazio criado. Adicione alunos e turmas.");
                 break;
             case 3:
@@ -138,6 +141,7 @@ public class App {
             }
             String idTurma = lerString("ID para a nova turma (ex: T99)");
             int capacidade = lerInteiro("Capacidade da turma");
+            // Simplificação de horário para o assistente
             Horario.DiaDaSemana dia = Horario.DiaDaSemana.values()[new Random().nextInt(6)];
             int horaInicio = 8 + new Random().nextInt(10);
             configurador.adicionarTurma(idTurma, cod, new Horario(dia, horaInicio, horaInicio + 2), capacidade);
@@ -146,15 +150,15 @@ public class App {
 
         this.sistema = configurador.construir();
         this.historicoDeRelatorios.clear();
+        this.periodoCorrente = 1;
         System.out.println("\nCenário personalizado criado com sucesso!");
     }
 
     private void menuConsultas() {
         System.out.println("\n--- Consultas e listagens ---");
-        System.out.println("1. Listar Alunos e turmas Ofertadas");
+        System.out.println("1. Listar alunos e turmas ofertadas");
         System.out.println("2. Ver grade planejada do aluno");
-        System.out.println("3. Remover turma do planejamento");
-        System.out.println("4. Voltar ao menu principal");
+        System.out.println("3. Voltar ao menu principal");
         int opcao = lerInteiro("Escolha uma opção");
 
         switch (opcao) {
@@ -165,9 +169,6 @@ public class App {
                 verGradePlanejada();
                 break;
             case 3:
-                removerTurmaDoPlano();
-                break;
-            case 4:
                 break;
             default:
                 System.out.println("Opção inválida.");
@@ -175,7 +176,7 @@ public class App {
     }
 
     private void listarAlunosETurmas() {
-        System.out.println("\n--- Alunos cadastrados ---");
+        System.out.println("\n--- Alunos Cadastrados ---");
         if (sistema.listarAlunos().isEmpty()) {
             System.out.println("Nenhum aluno cadastrado neste cenário.");
         } else {
@@ -211,7 +212,7 @@ public class App {
     }
 
     private void montarPlanejamento() {
-        System.out.println("\n--- Montar planejamento de matrícula ---");
+        System.out.println("\n--- Planejamento de matrícula ---");
         listarAlunosETurmas();
         String matricula = lerString("\nDigite a matrícula do aluno");
         Aluno aluno = sistema.buscarAluno(matricula);
@@ -238,32 +239,55 @@ public class App {
         System.out.printf("Planejamento do aluno %s atualizado com %d turmas.\n", aluno.getNome(), plano.size());
     }
 
+    private void removerTurmaDoPlanejamento() {
+        System.out.println("\n--- Remover Turma do planejamento ---");
+        String matricula = lerString("Digite a matrícula do aluno");
+        Aluno aluno = sistema.buscarAluno(matricula);
+
+        if (aluno == null) {
+            System.out.println("ERRO: Aluno não encontrado.");
+            return;
+        }
+
+        if (aluno.getPlanejamento() == null || aluno.getPlanejamento().isEmpty()) {
+            System.out.println("O aluno não possui turmas em seu planejamento atual.");
+            return;
+        }
+
+        System.out.println("Turmas no planejamento de " + aluno.getNome() + ":");
+        aluno.getPlanejamento().forEach(t -> System.out.println("ID: " + t.getId() + " - " + t.getDisciplina().getNome()));
+
+        String idTurma = lerString("Digite o ID da turma a ser removida");
+        boolean removido = aluno.getPlanejamento().removeIf(t -> t.getId().equalsIgnoreCase(idTurma));
+
+        if (removido) {
+            System.out.println("Turma removida com sucesso.");
+        } else {
+            System.out.println("ERRO: Turma com ID '" + idTurma + "' não encontrada no planejamento.");
+        }
+    }
+
     private void executarSimulacao() {
-        int periodoAnterior = sistema.getPeriodoAtual();
-        System.out.println("\n>>> INICIANDO SIMULAÇÃO DE MATRÍCULA PARA O PERÍODO " + periodoAnterior + " <<<");
+        int periodoDaSimulacao = this.periodoCorrente;
+        System.out.println("\n>>> INICIANDO SIMULAÇÃO DE MATRÍCULA PARA O PERÍODO " + periodoDaSimulacao + " <<<");
+
         Map<Aluno, RelatorioMatricula> relatorios = sistema.executarSimulacaoPeriodo();
 
         if (relatorios.isEmpty()) {
             System.out.println("Nenhum aluno tinha planejamento para ser processado.");
-            return;
+        } else {
+            System.out.println("\n--- Relatórios gerados ---");
+            relatorios.forEach((aluno, relatorio) -> {
+                historicoDeRelatorios.computeIfAbsent(aluno.getMatricula(), k -> new HashMap<>())
+                        .put(periodoDaSimulacao, relatorio);
+                System.out.println(relatorio.toString());
+            });
         }
 
-        System.out.println("\n--- Relatórios Gerados ---");
-        relatorios.forEach((aluno, relatorio) -> {
-            // Salva o relatório no histórico
-            historicoDeRelatorios.computeIfAbsent(aluno.getMatricula(), k -> new HashMap<>())
-                    .put(periodoAnterior, relatorio);
-            System.out.println(relatorio.toString());
-        });
-        
-        if (sistema.getPeriodoAtual() > periodoAnterior) {
-            System.out.println(">>> SIMULAÇÃO CONCLUÍDA. O sistema avançou para o período " + sistema.getPeriodoAtual() + " pois TODAS as turmas planejadas foram aceitas. <<<");
-            System.out.println(">>> O histórico dos alunos foi atualizado com as disciplinas cursadas. <<<");
-        } else {
-            System.out.println(">>> SIMULAÇÃO CONCLUÍDA. O período permanece em " + sistema.getPeriodoAtual() + " pois nem todas as turmas planejadas foram aceitas. <<<");
-            System.out.println(">>> O histórico dos alunos NÃO foi atualizado. <<<");
-            System.out.println(">>> Os planejamentos foram LIMPOS automaticamente. Os alunos podem criar novos planejamentos. <<<");
-        }
+        this.periodoCorrente++;
+        System.out.println("\n>>> SIMULAÇÃO CONCLUÍDA. O sistema avançou para o período " + this.periodoCorrente + ". <<<");
+        System.out.println(">>> O histórico dos alunos foi ATUALIZADO com as turmas aceitas. <<<");
+        System.out.println(">>> Os planejamentos foram LIMPOS automaticamente. Os alunos podem criar novos planejamentos. <<<");
     }
 
     private void verHistorico() {
@@ -290,70 +314,11 @@ public class App {
         if (relatorio == null) {
             System.out.println("Nenhum relatório para este período.");
         } else {
-            System.out.println("\n--- Exibindo relatório do período " + periodo + " para " + matricula + " ---");
+            System.out.println("\n--- Exibindo Relatório do Período " + periodo + " para " + matricula + " ---");
             System.out.println(relatorio.toString());
         }
     }
 
-    private void removerTurmaDoPlano() {
-        System.out.println("\n--- Remover turma do planejamento ---");
-        String matricula = lerString("Digite a matrícula do aluno");
-        Aluno aluno = sistema.buscarAluno(matricula);
-
-        if (aluno == null) {
-            System.out.println("ERRO: Aluno não encontrado.");
-            return;
-        }
-
-        List<Turma> planejamento = aluno.getPlanejamento();
-        if (planejamento == null || planejamento.isEmpty()) {
-            System.out.println("O aluno " + aluno.getNome() + " não possui turmas planejadas.");
-            return;
-        }
-
-        // Mostra a grade atual
-        exibirGradeHoraria("Grade atual de " + aluno.getNome(), planejamento);
-
-        System.out.println("\n--- Turmas no planejamento ---");
-        for (int i = 0; i < planejamento.size(); i++) {
-            Turma turma = planejamento.get(i);
-            System.out.printf("%d. [%s] %s (%s) | %s | %dh\n",
-                    i + 1,
-                    turma.getId(),
-                    turma.getDisciplina().getNome(),
-                    turma.getDisciplina().getCodigo(),
-                    turma.getHorario().toString(),
-                    turma.getDisciplina().getCargaHoraria());
-        }
-
-        int opcao = lerInteiro("Digite o número da turma a ser removida (ou 0 para cancelar)");
-        
-        if (opcao == 0) {
-            System.out.println("Operação cancelada.");
-            return;
-        }
-
-        if (opcao < 1 || opcao > planejamento.size()) {
-            System.out.println("ERRO: Opção inválida.");
-            return;
-        }
-
-        Turma turmaRemovida = planejamento.remove(opcao - 1);
-        aluno.setPlanejamento(planejamento);
-        
-        System.out.printf("\n✓ Turma '%s' removida do planejamento de %s.\n", 
-                turmaRemovida.getDisciplina().getNome(), aluno.getNome());
-        System.out.printf("✓ Planejamento agora tem %d turma(s).\n", planejamento.size());
-        
-        // Mostra a grade atualizada se ainda houver turmas
-        if (!planejamento.isEmpty()) {
-            exibirGradeHoraria("Nova grade de " + aluno.getNome(), planejamento);
-        } else {
-            System.out.println("\n" + aluno.getNome() + " não possui mais turmas no planejamento.");
-        }
-    }
-
-    // Métodos utilitários
     private String lerString(String mensagem) {
         System.out.print(mensagem + ": ");
         return scanner.nextLine();
@@ -372,7 +337,7 @@ public class App {
     private void exibirGradeHoraria(String titulo, List<Turma> turmas) {
         System.out.println("\n--- " + titulo + " ---");
         if (turmas == null || turmas.isEmpty()) {
-            System.out.println("Nenhuma turma para exibir.");
+            System.out.println("   Nenhuma turma para exibir.");
             return;
         }
 
@@ -382,7 +347,7 @@ public class App {
         }
 
         if (grade.isEmpty()) {
-            System.out.println("Nenhuma disciplina alocada na grade.");
+            System.out.println("   Nenhuma disciplina alocada na grade.");
             return;
         }
 

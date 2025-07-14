@@ -6,14 +6,17 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-
+/**
+ * Responsável por inicializar o ambiente (disciplinas, turmas, alunos)
+ */
 public class SistemaAcademico {
 
     private final ServicoMatricula servicoMatricula;
-    private int periodoAtual = 1;
+    private int periodoAtual;
 
     private SistemaAcademico(Configurador config) {
         this.servicoMatricula = new ServicoMatricula();
+        this.periodoAtual = 1;
         inicializarSistema(config);
     }
 
@@ -22,7 +25,6 @@ public class SistemaAcademico {
      */
     private void inicializarSistema(Configurador config) {
         limparCatalogos();
-
         config.turmasParaCriar.forEach(CatalogoTurmas::adicionarTurma);
         config.alunosParaCriar.forEach(CatalogoAlunos::adicionarAluno);
     }
@@ -37,15 +39,11 @@ public class SistemaAcademico {
 
     /**
      * Executa a simulação de matrícula para o período atual para todos os alunos.
-     * Só atualiza o histórico dos alunos se TODAS as turmas planejadas forem aceitas.
-     * O período só avança se TODAS as turmas planejadas por TODOS os alunos forem aceitas.
+     * Após a execução, atualiza o histórico dos alunos com as disciplinas aceitas e avança o período.
      * @return Um mapa contendo o relatório de cada aluno processado.
      */
     public Map<Aluno, RelatorioMatricula> executarSimulacaoPeriodo() {
         Map<Aluno, RelatorioMatricula> relatorios = new LinkedHashMap<>();
-        boolean todasTurmasForamAceitas = true;
-        int totalTurmasPlanejadas = 0;
-        
         for (Aluno aluno : CatalogoAlunos.getTodosAlunos()) {
             if (aluno.getPlanejamento() == null || aluno.getPlanejamento().isEmpty()) {
                 continue; // Pula alunos que não planejaram nada
@@ -53,33 +51,11 @@ public class SistemaAcademico {
             RelatorioMatricula relatorio = servicoMatricula.processarPlanejamento(aluno);
             relatorios.put(aluno, relatorio);
 
-            // Conta turmas planejadas e aceitas para este aluno
-            int turmasPlanejadas = aluno.getPlanejamento().size();
-            int turmasAceitas = relatorio.getTurmasAceitas().size();
-            
-            totalTurmasPlanejadas += turmasPlanejadas;
-            
-            // Se nem todas as turmas deste aluno foram aceitas, o período não avança
-            if (turmasAceitas < turmasPlanejadas) {
-                todasTurmasForamAceitas = false;
-            }
+            atualizarHistoricoAluno(aluno, relatorio);
         }
-        
-        // Só avança o período E atualiza históricos se TODAS as turmas planejadas foram aceitas
-        if (todasTurmasForamAceitas && totalTurmasPlanejadas > 0) {
-            periodoAtual++;
-            // Só atualiza o histórico dos alunos se o período avançou
-            for (Map.Entry<Aluno, RelatorioMatricula> entry : relatorios.entrySet()) {
-                atualizarHistoricoAluno(entry.getKey(), entry.getValue());
-            }
-        } else {
-            // Se o período não avançou, limpa o planejamento de todos os alunos
-            // para permitir novo planejamento
-            for (Aluno aluno : relatorios.keySet()) {
-                aluno.setPlanejamento(new ArrayList<>());
-            }
-        }
-        
+
+        this.periodoAtual++;
+
         return relatorios;
     }
 
@@ -97,32 +73,17 @@ public class SistemaAcademico {
         }
     }
 
+    // MÉTODOS DE FAÇADE (para interagir com os catálogos)
+    public Aluno buscarAluno(String matricula) { return CatalogoAlunos.getAluno(matricula); }
+    public Collection<Aluno> listarAlunos() { return CatalogoAlunos.getTodosAlunos(); }
+    public Turma buscarTurma(String id) { return CatalogoTurmas.getTurma(id); }
+    public Collection<Turma> listarTurmas() { return CatalogoTurmas.getTodasTurmas(); }
+    public Collection<Disciplina> listarDisciplinas() { return CatalogoDisciplinas.getTodasDisciplinas(); }
+    public int getPeriodoAtual() { return periodoAtual; }
 
-    public Aluno buscarAluno(String matricula) {
-        return CatalogoAlunos.getAluno(matricula);
-    }
-
-    public Collection<Aluno> listarAlunos() {
-        return CatalogoAlunos.getTodosAlunos();
-    }
-
-    public Turma buscarTurma(String id) {
-        return CatalogoTurmas.getTurma(id);
-    }
-
-    public Collection<Turma> listarTurmas() {
-        return CatalogoTurmas.getTodasTurmas();
-    }
-
-    public Collection<Disciplina> listarDisciplinas() {
-        return CatalogoDisciplinas.getTodasDisciplinas();
-    }
-
-    public int getPeriodoAtual() {
-        return periodoAtual;
-    }
-
-
+    /**
+     * Configurarma instância de SistemaAcademico de forma flexível e personalizável.
+     */
     public static class Configurador {
         private final List<Turma> turmasParaCriar = new ArrayList<>();
         private final List<Aluno> alunosParaCriar = new ArrayList<>();
@@ -157,19 +118,12 @@ public class SistemaAcademico {
             return String.format("%d65%03d", ano, sequencialMatricula.getAndIncrement());
         }
 
-        /**
-         * Constrói e retorna a instância final de SistemaAcademico.
-         */
         public SistemaAcademico construir() {
             return new SistemaAcademico(this);
         }
 
-        /**
-         * Fornece uma configuração padrão pré-populada com dados de exemplo.
-         */
         public static Configurador criarConfiguracaoPadrao() {
             return new Configurador()
-                    // Configuração de turmas padrão
                     .adicionarTurma("T01", "DCC199", new Horario(Horario.DiaDaSemana.SEGUNDA, 8, 10), 50)
                     .adicionarTurma("T02", "DC5199", new Horario(Horario.DiaDaSemana.SEGUNDA, 10, 12), 50)
                     .adicionarTurma("T03", "MAT154", new Horario(Horario.DiaDaSemana.TERCA, 8, 10), 50)
@@ -178,8 +132,6 @@ public class SistemaAcademico {
                     .adicionarTurma("T06", "DC5200", new Horario(Horario.DiaDaSemana.QUINTA, 10, 12), 40)
                     .adicionarTurma("T07", "DCC046", new Horario(Horario.DiaDaSemana.SEXTA, 8, 10), 25)
                     .adicionarTurma("T08", "MUS001", new Horario(Horario.DiaDaSemana.SEXTA, 14, 16), 15)
-
-                    // Configuração de alunos padrão
                     .adicionarAluno("Ana (Caloura)", 240)
                     .adicionarAluno("Bruno (Veterano)", 300, aluno -> {
                         aluno.adicionarDisciplinaCursada(CatalogoDisciplinas.getDisciplina("DCC199"), 80f);

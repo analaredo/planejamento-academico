@@ -3,17 +3,17 @@ package br.ufjf.planejamento.servico;
 import br.ufjf.planejamento.modelo.Aluno;
 import br.ufjf.planejamento.modelo.Horario;
 import br.ufjf.planejamento.modelo.Turma;
+import br.ufjf.planejamento.servico.SistemaAcademico;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Encapsula o resultado completo e detalhado de uma simulação de matrícula.
+ * Esta classe é imutável após a criação e gera um relatório de texto rico
+ * através do seu método toString().
  */
 public class RelatorioMatricula {
 
@@ -39,6 +39,7 @@ public class RelatorioMatricula {
 
         public Turma getTurma() { return turma; }
         public Status getStatus() { return status; }
+        public String getMotivoFinal() { return motivoFinal; }
     }
 
     private final Aluno aluno;
@@ -59,6 +60,20 @@ public class RelatorioMatricula {
     }
 
     /**
+     * Retorna um mapa das turmas rejeitadas e seus respectivos motivos.
+     * Ideal para asserções de teste robustas.
+     * @return Um mapa onde a chave é a Turma rejeitada e o valor é a String do motivo.
+     */
+    public Map<Turma, String> getMotivosRejeicao() {
+        return resultados.stream()
+                .filter(r -> r.status == Status.REJEITADA)
+                .collect(Collectors.toMap(
+                        EntradaRelatorio::getTurma,
+                        EntradaRelatorio::getMotivoFinal
+                ));
+    }
+
+    /**
      * Gera uma representação em String completa e formatada do relatório.
      */
     @Override
@@ -67,13 +82,12 @@ public class RelatorioMatricula {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
         List<Turma> turmasAceitas = getTurmasAceitas();
-        List<EntradaRelatorio> turmasRejeitadas = resultados.stream()
-                .filter(r -> r.status == Status.REJEITADA)
-                .collect(Collectors.toList());
+        Map<Turma, String> turmasRejeitadas = getMotivosRejeicao();
 
         int cargaHorariaTotal = turmasAceitas.stream()
                 .mapToInt(t -> t.getDisciplina().getCargaHoraria()).sum();
 
+        // Cabeçalho
         sb.append("======================================================================\n");
         sb.append("              RELATÓRIO DE SIMULAÇÃO DE MATRÍCULA\n");
         sb.append("======================================================================\n");
@@ -81,8 +95,8 @@ public class RelatorioMatricula {
         sb.append(String.format("Processado em: %s\n", dataProcessamento.format(dtf)));
         sb.append("----------------------------------------------------------------------\n\n");
 
-
-        sb.append("[TURMAS ACEITAS]\n");
+        // Seção de Turmas Aceitas
+        sb.append("✅ TURMAS ACEITAS\n");
         if (turmasAceitas.isEmpty()) {
             sb.append("   Nenhuma turma aceita.\n");
         } else {
@@ -96,34 +110,35 @@ public class RelatorioMatricula {
         }
         sb.append("\n");
 
-        sb.append("[TURMAS REJEITADAS]\n");
+        // Seção de Turmas Rejeitadas
+        sb.append("❌ TURMAS REJEITADAS\n");
         if (turmasRejeitadas.isEmpty()) {
             sb.append("   Nenhuma turma rejeitada.\n");
         } else {
-            for (EntradaRelatorio res : turmasRejeitadas) {
-                sb.append(String.format("   - [%s] %s\n", res.turma.getDisciplina().getCodigo(), res.turma.getDisciplina().getNome()));
-                sb.append(String.format("     Motivo: %s\n", res.motivoFinal));
+            for (Map.Entry<Turma, String> res : turmasRejeitadas.entrySet()) {
+                sb.append(String.format("   - [%s] %s\n", res.getKey().getDisciplina().getCodigo(), res.getKey().getDisciplina().getNome()));
+                sb.append(String.format("     Motivo: %s\n", res.getValue()));
             }
         }
         sb.append("\n");
 
         // Resumo e Estatísticas
-        sb.append("RESUMO\n");
+        sb.append("📊 RESUMO DA SIMULAÇÃO\n");
         sb.append(String.format("   - Carga Horária Total Aceita: %dh (de um máximo de %dh)\n", cargaHorariaTotal, aluno.getCargaHorariaMaxima()));
         sb.append(String.format("   - Turmas Processadas: %d | Aceitas: %d | Rejeitadas: %d\n\n", resultados.size(), turmasAceitas.size(), turmasRejeitadas.size()));
 
-        sb.append("GRADE HORÁRIA\n");
+        // Grade Horária Visual
+        sb.append("🗓️ GRADE HORÁRIA VISUAL\n");
         sb.append(gerarGradeHoraria(turmasAceitas));
         sb.append("\n");
 
         // Log de Processamento Detalhado
-        sb.append("LOG DE PROCESSAMENTO\n");
+        sb.append("🔍 LOG DE PROCESSAMENTO DETALHADO\n");
         for (EntradaRelatorio res : resultados) {
             sb.append(String.format("   - Processando [%s] %s:\n", res.turma.getDisciplina().getCodigo(), res.turma.getDisciplina().getNome()));
             for (String log : res.logEventos) {
                 sb.append(String.format("     > %s\n", log));
             }
-            sb.append(String.format("     ==> Resultado Final: %s (%s)\n\n", res.status, res.motivoFinal));
         }
         sb.append("======================================================================\n");
         sb.append("                          FIM DO RELATÓRIO\n");
