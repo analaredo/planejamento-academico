@@ -1,8 +1,8 @@
 package br.ufjf.planejamento.modelo;
 
-public class DisciplinaOptativa extends Disciplina {
+public class DisciplinaObrigatoria extends Disciplina {
 
-    public DisciplinaOptativa(String codigo, String nome, int cargaHoraria) {
+    public DisciplinaObrigatoria(String codigo, String nome, int cargaHoraria) {
         super(codigo, nome, cargaHoraria);
     }
 
@@ -10,7 +10,7 @@ public class DisciplinaOptativa extends Disciplina {
     public int getPrioridade() {
         return 3;
     }
-    
+
     @Override
     public String getTipo() {
         return "Obrigatória";
